@@ -1,18 +1,23 @@
 # bpf2graphite
 
-Parse BPFTrace output and ship values to graphite
+Parse BPFTrace output and ship values to graphite.
+
+*This code is currently proof-of-concept and should not be used in production*
+
 
 # Features
 
-* written in python which spawns bpftrace and parses output in realtime without writing to disk
 * Systemd service to start bpf2graphite
 * Sends data to graphite by opening a socket to the server
 * Sends data to graphite in 15second increments
 * Can specify graphite server to send output to via Environment Variables
 * Takes care of high values (e.g. 1K) before sending to Graphite
 * Buffers input via an Queue before sending to Graphite
+* Written in python
+* Parses output without requirement for an intermediate log step
 
-# Directory Structure
+# Directory Structure of this repo
+```
 .
 ├── README.md
 ├── local.pp
@@ -27,24 +32,25 @@ Parse BPFTrace output and ship values to graphite
         ├── metadata.json
         └── templates
             └── bpf2graphite.service.erb
-
+```
 
 # Installation
 BPF2Graphite can easily be installed with the puppet module provided within this repository.
 
 To install locally with puppet - 
 
-# local.pp
+## local.pp
 ```
 class { 'BPF2Graphite': }
+```
 
+## Puppet local run
+```
 puppet apply --modulepath modules/ local.pp
 ```
 
-An example:
+## Example Puppet run
 ```
-puppet apply --modulepath modules/ local.pp
-
 Notice: Compiled catalog for tuxgrid.com in environment production in 0.76 seconds
 Notice: /Stage[main]/Bpf2graphite/File[/opt/bpf2graphite]/ensure: created
 Notice: /Stage[main]/Bpf2graphite/File[/opt/bpf2graphite/bpf2graphite.py]/ensure: defined content as '{md5}65a38c1741c946e60db8bc7ccec7f7c8'
@@ -68,17 +74,19 @@ To run locally -
 4. set graphite environment variables. default will return an error when tries to ship to graphite
 	export BPF2GRAPHITE_SERVER=localhost
 	export BPF2GRAPHITE_PORT=2003
-5. run python script from the same directory as cpu_latency.bt. requires python3.
+5. run python script from the same directory as cpu_latency.bt.
+
+** requires python3 **
 
 # Functions & Classes
 
-## BPFParse (class) - Spawns bpftrace and sends the contents to an sqs queue for later processing
+BPFParse (class) - Spawns bpftrace and sends the contents to an sqs queue for later processing
 _calcvalue - Takes care of high values before sending to Graphite
 _runtrace - Starts bpftrace in a subprocess
 go - parses results and ships to queue
 
-## send_msg - sends the messages to graphite
-## worker - gets messages from queue, batches up to send all messages in queue in a single operation. runs itself every 15s
+send_msg - sends the messages to graphite
+worker - gets messages from queue, batches up to send all messages in queue in a single operation. runs itself every 15s
 
 # Testing
 
@@ -93,10 +101,14 @@ docker run -d --name graphite --restart=always -p 80:80 -p 2003-2004:2003-2004 -
 # Known Issues
 
 * Does not take input from a configuration file to allow different bpftrace files to be parsed [FEATURE]
-* If bpftrace crashes will not respawn bpftrace and result in a script not sending input to graphite. script fails with 100% core use [BLOCKER TO PRODUCTION USE]
 * has no command line args. may come in a later version. [FEATURE]
+* If bpftrace crashes will not respawn bpftrace and result in a script not sending input to graphite. script fails with 100% core util [BLOCKER TO PRODUCTION USE]
+* Requires logging and debug modes for troubleshooting [BLOCKER TO PRODUCTION USE]
+
 
 # Example Output (Graphite not running)
+
+```
 
 Nov  3 23:42:57 tuxgrid bpf2graphite.py[12021]: tuxgrid.com.cpu-lat.4 1.0 1572824522
 Nov  3 23:42:57 tuxgrid bpf2graphite.py[12021]: tuxgrid.com.cpu-lat.8 1.0 1572824522
@@ -147,5 +159,5 @@ Nov  3 23:42:57 tuxgrid bpf2graphite.py[12021]: tuxgrid.com.cpu-lat.1000 0.0 157
 Nov  3 23:42:57 tuxgrid bpf2graphite.py[12021]: tuxgrid.com.cpu-lat.2000 1.0 1572824530
 Nov  3 23:42:57 tuxgrid bpf2graphite.py[12021]: tuxgrid.com.cpu-lat.4 1.0 1572824531
 Nov  3 23:42:57 tuxgrid bpf2graphite.py[12021]: [Errno 111] Connection refused
-
+```
 
