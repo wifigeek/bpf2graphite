@@ -1,0 +1,1 @@
+class { 'bpf2graphite': }

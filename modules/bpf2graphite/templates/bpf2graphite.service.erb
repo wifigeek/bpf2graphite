@@ -1,0 +1,12 @@
+[Unit]
+Description=ship bpftrace results to graphite
+
+[Service]
+Type=simple
+WorkingDirectory=<%= @bpf2graphite_location %>
+Environment="BPF2GRAPHITE_SERVER=<%= @bpf2graphite_server %>"
+Environment="BPF2GRAPHITE_PORT=<%= @bpf2graphite_port %>"
+ExecStart=<%= @bpf2graphite_location %>/bpf2graphite.py
+
+[Install]
+WantedBy=multi-user.target
