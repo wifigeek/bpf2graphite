@@ -33,9 +33,15 @@ class BPFParse():
     def go(self):
         """poll bpftrace for results. parse and send to queue"""
         (sel, popen) = self._runtrace()
+        # when bpftrace fails we dont want to chew cpu cycles and
+        # instead restart bpftrace and continue collecting metrics
         while True:
             if sel.poll(1):
                 line = popen.stdout.readline()
+                if not line.decode():
+                    print('bpftrace has stopped sending data. restarting it in 5s')
+                    time.sleep(5)
+                    (sel, popen) = self._runtrace()
                 for (bucket, value) in re.findall(self.pattern, line.decode()):
                     # bucket value can be in the thousands. we need to parse it
                     bucketvalue = self._calcvalue(bucket)
